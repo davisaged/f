@@ -1,16 +1,7 @@
--- DebugMenu.DraggableCenter.local.lua
--- LocalScript: menu arrastável e que aparece centralizado ao abrir.
--- Cole como LocalScript em StarterPlayerScripts e rode Play/Play Solo.
--- Use Insert/M ou o botão "Abrir Menu" para mostrar/ocultar. Arraste a barra de título para mover.
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-
 local LocalPlayer = Players.LocalPlayer
-if not LocalPlayer then
-	repeat task.wait() LocalPlayer = Players.LocalPlayer until LocalPlayer
-end
+if not LocalPlayer then repeat task.wait() LocalPlayer = Players.LocalPlayer until LocalPlayer end
 local playerGui = LocalPlayer:WaitForChild("PlayerGui")
 local camera = workspace.CurrentCamera
 
@@ -29,22 +20,18 @@ local function new(className, props)
 	return obj
 end
 
--- remove GUI antiga
 local existing = playerGui:FindFirstChild("SinglePlayerMenu_GUI")
 if existing then existing:Destroy() end
 
--- ScreenGui
 local screenGui = new("ScreenGui", {Name = "SinglePlayerMenu_GUI", Parent = playerGui, ResetOnSpawn = false})
 
--- Configurações de tamanho da janela
 local FRAME_W, FRAME_H = 600, 360
 
--- MAIN FRAME: usar Anchor (0,0) para facilitar arrastar; vamos centralizar manualmente ao abrir
 local mainFrame = new("Frame", {
 	Parent = screenGui,
 	Name = "Main",
 	AnchorPoint = Vector2.new(0,0),
-	Position = UDim2.fromOffset(100, 100),
+	Position = UDim2.fromOffset(0, 0),
 	Size = UDim2.new(0, FRAME_W, 0, FRAME_H),
 	BackgroundColor3 = Color3.fromRGB(28,28,28),
 	BorderSizePixel = 0,
@@ -52,7 +39,6 @@ local mainFrame = new("Frame", {
 })
 new("UICorner", {Parent = mainFrame, CornerRadius = UDim.new(0,10)})
 
--- TITLE BAR (arrastável)
 local titleBar = new("TextButton", {
 	Parent = mainFrame,
 	Name = "TitleBar",
@@ -63,15 +49,13 @@ local titleBar = new("TextButton", {
 	AutoButtonColor = false,
 })
 new("UICorner", {Parent = titleBar, CornerRadius = UDim.new(0,8)})
-local titleLabel = new("TextLabel", {Parent = titleBar, Text = "MENU (arraste aqui)", Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, TextColor3 = Color3.new(1,1,1), Font = Enum.Font.SourceSansBold, TextSize = 16})
+new("TextLabel", {Parent = titleBar, Text = "MENU", Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, TextColor3 = Color3.new(1,1,1), Font = Enum.Font.SourceSansBold, TextSize = 16})
 
--- Sidebar + content (simples)
 local sidebar = new("Frame", {Parent = mainFrame, Size = UDim2.new(0,140,1,0), Position = UDim2.new(0,0,0,36), BackgroundColor3 = Color3.fromRGB(22,22,22)})
 new("UICorner", {Parent = sidebar, CornerRadius = UDim.new(0,8)})
 local content = new("Frame", {Parent = mainFrame, Position = UDim2.new(0,150,0,46), Size = UDim2.new(1,-160,1,-56), BackgroundColor3 = Color3.fromRGB(40,40,40)})
 new("UICorner", {Parent = content, CornerRadius = UDim.new(0,8)})
 
--- Abas (funcionalidade mínima)
 local function makeTab(name, icon)
 	local btn = new("TextButton", {Parent = sidebar, Text = icon .. "  " .. name, Size = UDim2.new(1,-12,0,40), BackgroundColor3 = Color3.fromRGB(28,28,28), TextColor3 = Color3.fromRGB(230,230,230), Font = Enum.Font.SourceSansBold, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left})
 	new("UICorner", {Parent = btn, CornerRadius = UDim.new(0,6)})
@@ -96,18 +80,17 @@ for _, t in ipairs(tabs) do
 end
 pages.Visual.Visible = true
 
--- simples placeholders
 local function makeLabel(parent, text, y)
 	local l = new("TextLabel", {Parent = parent, Text = text, Size = UDim2.new(1,0,0,22), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(220,220,220), Font = Enum.Font.SourceSans, TextSize = 16})
 	if y then l.Position = UDim2.new(0,0,0,y) end
 	return l
 end
-makeLabel(pages.Visual, "Visual (arraste a janela pela barra de título)", 6)
-makeLabel(pages.Player, "Player options (placeholder)", 6)
-makeLabel(pages.World, "World options (placeholder)", 6)
-makeLabel(pages.Weapon, "Weapon options (placeholder)", 6)
 
--- Botão de abrir/fechar (visível fora do menu)
+makeLabel(pages.Visual, "Visual", 6)
+makeLabel(pages.Player, "Player", 6)
+makeLabel(pages.World, "World", 6)
+makeLabel(pages.Weapon, "Weapon", 6)
+
 local openBtn = new("TextButton", {Parent = screenGui, Text = "Abrir Menu", Size = UDim2.new(0,110,0,28), Position = UDim2.new(0,8,0,8), BackgroundColor3 = Color3.fromRGB(60,60,60), TextColor3 = Color3.new(1,1,1)})
 new("UICorner", {Parent = openBtn, CornerRadius = UDim.new(0,6)})
 
@@ -120,13 +103,9 @@ end
 
 openBtn.MouseButton1Click:Connect(function()
 	mainFrame.Visible = not mainFrame.Visible
-	if mainFrame.Visible then
-		-- centraliza quando abrir
-		centerWindow()
-	end
+	if mainFrame.Visible then centerWindow() end
 end)
 
--- Keybinds: Insert / M
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.UserInputType == Enum.UserInputType.Keyboard then
@@ -137,7 +116,6 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 end)
 
--- DRAG LOGIC (robusto)
 local dragging = false
 local dragInput = nil
 local dragStart = nil
@@ -149,7 +127,6 @@ titleBar.InputBegan:Connect(function(input)
 		dragInput = input
 		dragStart = input.Position
 		startPos = Vector2.new(mainFrame.AbsolutePosition.X, mainFrame.AbsolutePosition.Y)
-		-- Connect end of this specific input to stop dragging
 		input.Changed:Connect(function()
 			if input.UserInputState == Enum.UserInputState.End then
 				dragging = false
@@ -164,7 +141,6 @@ UserInputService.InputChanged:Connect(function(input)
 		local delta = input.Position - dragStart
 		local newX = startPos.X + delta.X
 		local newY = startPos.Y + delta.Y
-		-- clamp to viewport
 		local vp = camera and camera.ViewportSize or Vector2.new(1280,720)
 		newX = math.clamp(newX, 0, math.max(0, vp.X - mainFrame.AbsoluteSize.X))
 		newY = math.clamp(newY, 0, math.max(0, vp.Y - mainFrame.AbsoluteSize.Y))
@@ -172,8 +148,5 @@ UserInputService.InputChanged:Connect(function(input)
 	end
 end)
 
--- Auto-center on spawn so first open is centered
 centerWindow()
-mainFrame.Visible = true
-
-print("[DebugMenu] carregado com arrastar e centralização ao abrir.")
+mainFrame.Visible = false
