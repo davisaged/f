@@ -1,12 +1,11 @@
--- DebugMenu.Draggable.local.lua
--- Versão do menu com suporte a arrastar (drag) pelo mouse.
+-- DebugMenu.DraggableCenter.local.lua
+-- LocalScript: menu arrastável e que aparece centralizado ao abrir.
 -- Cole como LocalScript em StarterPlayerScripts e rode Play/Play Solo.
--- Pressione Insert ou M, ou clique no botão "Abrir Menu" para mostrar/ocultar.
--- Esta é apenas UI (sem automação de mira).
+-- Use Insert/M ou o botão "Abrir Menu" para mostrar/ocultar. Arraste a barra de título para mover.
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 if not LocalPlayer then
@@ -30,32 +29,30 @@ local function new(className, props)
 	return obj
 end
 
--- Remove GUI antiga se existir
+-- remove GUI antiga
 local existing = playerGui:FindFirstChild("SinglePlayerMenu_GUI")
 if existing then existing:Destroy() end
 
 -- ScreenGui
 local screenGui = new("ScreenGui", {Name = "SinglePlayerMenu_GUI", Parent = playerGui, ResetOnSpawn = false})
 
--- MAIN FRAME: usar Position via pixels (fromOffset) para facilitar arrastar
-local frameWidth, frameHeight = 600, 360
-local viewport = camera and camera.ViewportSize or Vector2.new(1280,720)
-local initialX = math.floor((viewport.X - frameWidth) / 2)
-local initialY = math.floor((viewport.Y - frameHeight) / 2)
+-- Configurações de tamanho da janela
+local FRAME_W, FRAME_H = 600, 360
 
+-- MAIN FRAME: usar Anchor (0,0) para facilitar arrastar; vamos centralizar manualmente ao abrir
 local mainFrame = new("Frame", {
 	Parent = screenGui,
 	Name = "Main",
 	AnchorPoint = Vector2.new(0,0),
-	Position = UDim2.fromOffset(initialX, initialY),
-	Size = UDim2.new(0, frameWidth, 0, frameHeight),
+	Position = UDim2.fromOffset(100, 100),
+	Size = UDim2.new(0, FRAME_W, 0, FRAME_H),
 	BackgroundColor3 = Color3.fromRGB(28,28,28),
 	BorderSizePixel = 0,
 	Visible = false,
 })
 new("UICorner", {Parent = mainFrame, CornerRadius = UDim.new(0,10)})
 
--- TITLE BAR (área de arrastar)
+-- TITLE BAR (arrastável)
 local titleBar = new("TextButton", {
 	Parent = mainFrame,
 	Name = "TitleBar",
@@ -66,16 +63,15 @@ local titleBar = new("TextButton", {
 	AutoButtonColor = false,
 })
 new("UICorner", {Parent = titleBar, CornerRadius = UDim.new(0,8)})
-local titleLabel = new("TextLabel", {Parent = titleBar, Text = "MENU DEBUG (arraste aqui)", Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, TextColor3 = Color3.new(1,1,1), Font = Enum.Font.SourceSansBold, TextSize = 16})
-titleLabel.RichText = false
+local titleLabel = new("TextLabel", {Parent = titleBar, Text = "MENU (arraste aqui)", Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, TextColor3 = Color3.new(1,1,1), Font = Enum.Font.SourceSansBold, TextSize = 16})
 
--- Sidebar + content
+-- Sidebar + content (simples)
 local sidebar = new("Frame", {Parent = mainFrame, Size = UDim2.new(0,140,1,0), Position = UDim2.new(0,0,0,36), BackgroundColor3 = Color3.fromRGB(22,22,22)})
 new("UICorner", {Parent = sidebar, CornerRadius = UDim.new(0,8)})
 local content = new("Frame", {Parent = mainFrame, Position = UDim2.new(0,150,0,46), Size = UDim2.new(1,-160,1,-56), BackgroundColor3 = Color3.fromRGB(40,40,40)})
 new("UICorner", {Parent = content, CornerRadius = UDim.new(0,8)})
 
--- Tabs
+-- Abas (funcionalidade mínima)
 local function makeTab(name, icon)
 	local btn = new("TextButton", {Parent = sidebar, Text = icon .. "  " .. name, Size = UDim2.new(1,-12,0,40), BackgroundColor3 = Color3.fromRGB(28,28,28), TextColor3 = Color3.fromRGB(230,230,230), Font = Enum.Font.SourceSansBold, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left})
 	new("UICorner", {Parent = btn, CornerRadius = UDim.new(0,6)})
@@ -100,89 +96,84 @@ for _, t in ipairs(tabs) do
 end
 pages.Visual.Visible = true
 
--- Simple controls to show functionality
+-- simples placeholders
 local function makeLabel(parent, text, y)
 	local l = new("TextLabel", {Parent = parent, Text = text, Size = UDim2.new(1,0,0,22), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(220,220,220), Font = Enum.Font.SourceSans, TextSize = 16})
 	if y then l.Position = UDim2.new(0,0,0,y) end
 	return l
 end
-local function makeToggle(parent, text, default, y)
-	local f = new("Frame", {Parent = parent, Size = UDim2.new(1,0,0,30)})
-	if y then f.Position = UDim2.new(0,6,0,y) end
-	new("TextLabel", {Parent = f, Text = text, Size = UDim2.new(0.7,0,1,0), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(220,220,220), Font = Enum.Font.SourceSans})
-	local btn = new("TextButton", {Parent = f, Size = UDim2.new(0.28,-6,0.7,0), Position = UDim2.new(0.72,6,0.15,0), Text = default and "ON" or "OFF", BackgroundColor3 = default and Color3.fromRGB(70,160,70) or Color3.fromRGB(160,70,70), TextColor3 = Color3.new(1,1,1)})
-	new("UICorner", {Parent = btn, CornerRadius = UDim.new(0,6)})
-	local state = default
-	btn.MouseButton1Click:Connect(function()
-		state = not state
-		btn.Text = state and "ON" or "OFF"
-		btn.BackgroundColor3 = state and Color3.fromRGB(70,160,70) or Color3.fromRGB(160,70,70)
-		print("[DebugMenu] Toggle", text, "->", state)
-	end)
-	return f
-end
+makeLabel(pages.Visual, "Visual (arraste a janela pela barra de título)", 6)
+makeLabel(pages.Player, "Player options (placeholder)", 6)
+makeLabel(pages.World, "World options (placeholder)", 6)
+makeLabel(pages.Weapon, "Weapon options (placeholder)", 6)
 
-local visualPage = pages.Visual
-makeLabel(visualPage, "Visual (arrastável)", 6)
-makeToggle(visualPage, "ESP BOX", true, 34)
-makeToggle(visualPage, "ESP NAME", true, 34+36)
-
--- Button to open/close menu (top-left)
+-- Botão de abrir/fechar (visível fora do menu)
 local openBtn = new("TextButton", {Parent = screenGui, Text = "Abrir Menu", Size = UDim2.new(0,110,0,28), Position = UDim2.new(0,8,0,8), BackgroundColor3 = Color3.fromRGB(60,60,60), TextColor3 = Color3.new(1,1,1)})
 new("UICorner", {Parent = openBtn, CornerRadius = UDim.new(0,6)})
+
+local function centerWindow()
+	local vp = camera and camera.ViewportSize or Vector2.new(1280,720)
+	local x = math.floor((vp.X - FRAME_W) / 2)
+	local y = math.floor((vp.Y - FRAME_H) / 2)
+	mainFrame.Position = UDim2.fromOffset(x, y)
+end
+
 openBtn.MouseButton1Click:Connect(function()
 	mainFrame.Visible = not mainFrame.Visible
-	print("[DebugMenu] botão AbrirMenu clicado; mainFrame.Visible =", mainFrame.Visible)
+	if mainFrame.Visible then
+		-- centraliza quando abrir
+		centerWindow()
+	end
 end)
 
--- Keybinds (Insert and M)
+-- Keybinds: Insert / M
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.UserInputType == Enum.UserInputType.Keyboard then
 		if input.KeyCode == Enum.KeyCode.Insert or input.KeyCode == Enum.KeyCode.M then
 			mainFrame.Visible = not mainFrame.Visible
-			print("[DebugMenu] tecla detectada:", input.KeyCode.Name, "mainFrame.Visible =", mainFrame.Visible)
+			if mainFrame.Visible then centerWindow() end
 		end
 	end
 end)
 
--- DRAGGING LOGIC (arrastar pela titleBar)
+-- DRAG LOGIC (robusto)
 local dragging = false
+local dragInput = nil
 local dragStart = nil
-local frameStart = nil
-
-local function clampPosition(x, y)
-	local vp = camera and camera.ViewportSize or Vector2.new(1280,720)
-	local fw, fh = mainFrame.AbsoluteSize.X, mainFrame.AbsoluteSize.Y
-	local nx = math.clamp(x, 0, math.max(0, vp.X - fw))
-	local ny = math.clamp(y, 0, math.max(0, vp.Y - fh))
-	return nx, ny
-end
+local startPos = nil
 
 titleBar.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
 		dragging = true
+		dragInput = input
 		dragStart = input.Position
-		frameStart = Vector2.new(mainFrame.AbsolutePosition.X, mainFrame.AbsolutePosition.Y)
-		-- capture release on this input
+		startPos = Vector2.new(mainFrame.AbsolutePosition.X, mainFrame.AbsolutePosition.Y)
+		-- Connect end of this specific input to stop dragging
 		input.Changed:Connect(function()
 			if input.UserInputState == Enum.UserInputState.End then
 				dragging = false
+				dragInput = nil
 			end
 		end)
 	end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement and dragInput and input == dragInput then
 		local delta = input.Position - dragStart
-		local newX = frameStart.X + delta.X
-		local newY = frameStart.Y + delta.Y
-		newX, newY = clampPosition(newX, newY)
+		local newX = startPos.X + delta.X
+		local newY = startPos.Y + delta.Y
+		-- clamp to viewport
+		local vp = camera and camera.ViewportSize or Vector2.new(1280,720)
+		newX = math.clamp(newX, 0, math.max(0, vp.X - mainFrame.AbsoluteSize.X))
+		newY = math.clamp(newY, 0, math.max(0, vp.Y - mainFrame.AbsoluteSize.Y))
 		mainFrame.Position = UDim2.fromOffset(newX, newY)
 	end
 end)
 
--- Auto-open on spawn for convenience (remove if not needed)
+-- Auto-center on spawn so first open is centered
+centerWindow()
 mainFrame.Visible = true
-print("[DebugMenu] carregado com suporte a arrastar. Arraste o título para mover a janela.")
+
+print("[DebugMenu] carregado com arrastar e centralização ao abrir.")
