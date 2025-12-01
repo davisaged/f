@@ -1,73 +1,81 @@
--- DebugMenu.local.lua
--- Versão de depuração do menu: abre automaticamente ao iniciar (debugAutoOpen = true),
--- imprime logs no Output e tem botão para abrir/fechar. Cole ESTE arquivo como LocalScript
--- em StarterPlayerScripts e rode Play/Play Solo. Se não aparecer, cole as mensagens do Output.
--- Este script é apenas UI (sem aimbot). Ajuste debugAutoOpen = false depois.
+-- DebugMenu.Draggable.local.lua
+-- Versão do menu com suporte a arrastar (drag) pelo mouse.
+-- Cole como LocalScript em StarterPlayerScripts e rode Play/Play Solo.
+-- Pressione Insert ou M, ou clique no botão "Abrir Menu" para mostrar/ocultar.
+-- Esta é apenas UI (sem automação de mira).
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local CollectionService = game:GetService("CollectionService")
 
 local LocalPlayer = Players.LocalPlayer
 if not LocalPlayer then
 	repeat task.wait() LocalPlayer = Players.LocalPlayer until LocalPlayer
 end
-
 local playerGui = LocalPlayer:WaitForChild("PlayerGui")
-local debugAutoOpen = true -- abre automaticamente para teste; depois coloque false
+local camera = workspace.CurrentCamera
 
 local function new(className, props)
-	local ok, obj = pcall(function() return Instance.new(className) end)
-	if not ok then return nil end
-	if props and obj then
+	local obj = Instance.new(className)
+	if props then
 		for k,v in pairs(props) do
 			if k ~= "Parent" then
 				pcall(function() obj[k] = v end)
 			end
 		end
-		if props and props.Parent then
+		if props.Parent then
 			pcall(function() obj.Parent = props.Parent end)
 		end
 	end
 	return obj
 end
 
--- start logging
-print("[DebugMenu] iniciando...")
-
--- Remove qualquer GUI antiga com mesmo nome (evitar duplicação)
+-- Remove GUI antiga se existir
 local existing = playerGui:FindFirstChild("SinglePlayerMenu_GUI")
-if existing then existing:Destroy(); print("[DebugMenu] GUI antiga removida") end
+if existing then existing:Destroy() end
 
--- Build GUI
+-- ScreenGui
 local screenGui = new("ScreenGui", {Name = "SinglePlayerMenu_GUI", Parent = playerGui, ResetOnSpawn = false})
-if not screenGui then
-	warn("[DebugMenu] não foi possível criar ScreenGui")
-	return
-end
+
+-- MAIN FRAME: usar Position via pixels (fromOffset) para facilitar arrastar
+local frameWidth, frameHeight = 600, 360
+local viewport = camera and camera.ViewportSize or Vector2.new(1280,720)
+local initialX = math.floor((viewport.X - frameWidth) / 2)
+local initialY = math.floor((viewport.Y - frameHeight) / 2)
 
 local mainFrame = new("Frame", {
 	Parent = screenGui,
 	Name = "Main",
-	AnchorPoint = Vector2.new(0.5,0.5),
-	Position = UDim2.new(0.5,0.5),
-	Size = UDim2.new(0,600,0,360),
+	AnchorPoint = Vector2.new(0,0),
+	Position = UDim2.fromOffset(initialX, initialY),
+	Size = UDim2.new(0, frameWidth, 0, frameHeight),
 	BackgroundColor3 = Color3.fromRGB(28,28,28),
 	BorderSizePixel = 0,
 	Visible = false,
 })
 new("UICorner", {Parent = mainFrame, CornerRadius = UDim.new(0,10)})
 
--- Header
-local title = new("TextLabel", {Parent = mainFrame, Size = UDim2.new(1,0,0,36), BackgroundTransparency = 1, Text = "MENU DEBUG", Font = Enum.Font.SourceSansBold, TextSize = 20, TextColor3 = Color3.new(1,1,1)})
+-- TITLE BAR (área de arrastar)
+local titleBar = new("TextButton", {
+	Parent = mainFrame,
+	Name = "TitleBar",
+	Size = UDim2.new(1,0,0,36),
+	Position = UDim2.new(0,0,0,0),
+	BackgroundColor3 = Color3.fromRGB(24,24,24),
+	Text = "",
+	AutoButtonColor = false,
+})
+new("UICorner", {Parent = titleBar, CornerRadius = UDim.new(0,8)})
+local titleLabel = new("TextLabel", {Parent = titleBar, Text = "MENU DEBUG (arraste aqui)", Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, TextColor3 = Color3.new(1,1,1), Font = Enum.Font.SourceSansBold, TextSize = 16})
+titleLabel.RichText = false
+
 -- Sidebar + content
-local sidebar = new("Frame", {Parent = mainFrame, Size = UDim2.new(0,140,1,0), BackgroundColor3 = Color3.fromRGB(22,22,22)})
+local sidebar = new("Frame", {Parent = mainFrame, Size = UDim2.new(0,140,1,0), Position = UDim2.new(0,0,0,36), BackgroundColor3 = Color3.fromRGB(22,22,22)})
 new("UICorner", {Parent = sidebar, CornerRadius = UDim.new(0,8)})
-local content = new("Frame", {Parent = mainFrame, Position = UDim2.new(0,150,0,10), Size = UDim2.new(1,-160,1,-20), BackgroundColor3 = Color3.fromRGB(40,40,40)})
+local content = new("Frame", {Parent = mainFrame, Position = UDim2.new(0,150,0,46), Size = UDim2.new(1,-160,1,-56), BackgroundColor3 = Color3.fromRGB(40,40,40)})
 new("UICorner", {Parent = content, CornerRadius = UDim.new(0,8)})
 
--- Create tabs quickly
+-- Tabs
 local function makeTab(name, icon)
 	local btn = new("TextButton", {Parent = sidebar, Text = icon .. "  " .. name, Size = UDim2.new(1,-12,0,40), BackgroundColor3 = Color3.fromRGB(28,28,28), TextColor3 = Color3.fromRGB(230,230,230), Font = Enum.Font.SourceSansBold, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left})
 	new("UICorner", {Parent = btn, CornerRadius = UDim.new(0,6)})
@@ -81,9 +89,8 @@ local tabs = {
 	{key="World", icon="🌐"},
 	{key="Weapon", icon="🔫"},
 }
-
 local pages = {}
-for i,t in ipairs(tabs) do
+for _, t in ipairs(tabs) do
 	local b = makeTab(t.key, t.icon)
 	local p = new("Frame", {Parent = content, Name = t.key.."Page", Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, Visible = false})
 	pages[t.key] = p
@@ -93,7 +100,7 @@ for i,t in ipairs(tabs) do
 end
 pages.Visual.Visible = true
 
--- Simple controls for Visual page to confirm interactivity
+-- Simple controls to show functionality
 local function makeLabel(parent, text, y)
 	local l = new("TextLabel", {Parent = parent, Text = text, Size = UDim2.new(1,0,0,22), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(220,220,220), Font = Enum.Font.SourceSans, TextSize = 16})
 	if y then l.Position = UDim2.new(0,0,0,y) end
@@ -116,11 +123,11 @@ local function makeToggle(parent, text, default, y)
 end
 
 local visualPage = pages.Visual
-makeLabel(visualPage, "Visual (debug)", 6)
+makeLabel(visualPage, "Visual (arrastável)", 6)
 makeToggle(visualPage, "ESP BOX", true, 34)
 makeToggle(visualPage, "ESP NAME", true, 34+36)
 
--- Add open button (top-left)
+-- Button to open/close menu (top-left)
 local openBtn = new("TextButton", {Parent = screenGui, Text = "Abrir Menu", Size = UDim2.new(0,110,0,28), Position = UDim2.new(0,8,0,8), BackgroundColor3 = Color3.fromRGB(60,60,60), TextColor3 = Color3.new(1,1,1)})
 new("UICorner", {Parent = openBtn, CornerRadius = UDim.new(0,6)})
 openBtn.MouseButton1Click:Connect(function()
@@ -139,20 +146,43 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 end)
 
--- Auto-open for debug
-if debugAutoOpen then
-	mainFrame.Visible = true
-	print("[DebugMenu] aberto automaticamente (debugAutoOpen = true)")
-else
-	print("[DebugMenu] carregado. Use Insert/M ou botão Abrir Menu.")
+-- DRAGGING LOGIC (arrastar pela titleBar)
+local dragging = false
+local dragStart = nil
+local frameStart = nil
+
+local function clampPosition(x, y)
+	local vp = camera and camera.ViewportSize or Vector2.new(1280,720)
+	local fw, fh = mainFrame.AbsoluteSize.X, mainFrame.AbsoluteSize.Y
+	local nx = math.clamp(x, 0, math.max(0, vp.X - fw))
+	local ny = math.clamp(y, 0, math.max(0, vp.Y - fh))
+	return nx, ny
 end
 
--- Quick verification: print presence of GUI in PlayerGui
-print("[DebugMenu] ScreenGui parent:", screenGui.Parent and screenGui.Parent.Name or "NIL")
-print("[DebugMenu] mainFrame visible:", mainFrame.Visible)
+titleBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		frameStart = Vector2.new(mainFrame.AbsolutePosition.X, mainFrame.AbsolutePosition.Y)
+		-- capture release on this input
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
 
--- Small on-screen hint that auto-removes
-local hint = new("Hint", {Parent = playerGui, Text = "DebugMenu carregado. Abra com Insert/M ou botão."})
-task.delay(3, function() pcall(function() hint:Destroy() end) end)
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - dragStart
+		local newX = frameStart.X + delta.X
+		local newY = frameStart.Y + delta.Y
+		newX, newY = clampPosition(newX, newY)
+		mainFrame.Position = UDim2.fromOffset(newX, newY)
+	end
+end)
 
--- If ainda não aparecer, cole aqui a saída do Output (tudo que começa com [DebugMenu]) para eu revisar.
+-- Auto-open on spawn for convenience (remove if not needed)
+mainFrame.Visible = true
+print("[DebugMenu] carregado com suporte a arrastar. Arraste o título para mover a janela.")
