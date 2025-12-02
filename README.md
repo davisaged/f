@@ -12,9 +12,13 @@ local function new(className, props)
 	local obj = Instance.new(className)
 	if props then
 		for k,v in pairs(props) do
-			if k ~= "Parent" then pcall(function() obj[k] = v end) end
+			if k ~= "Parent" then
+				pcall(function() obj[k] = v end)
+			end
 		end
-		if props.Parent then pcall(function() obj.Parent = props.Parent end) end
+		if props.Parent then
+			pcall(function() obj.Parent = props.Parent end)
+		end
 	end
 	return obj
 end
@@ -63,9 +67,10 @@ local closeBtn = new("TextButton", {Parent = titleBar, Text = "X", Size = UDim2.
 new("UICorner", {Parent = closeBtn, CornerRadius = UDim.new(0,6)})
 closeBtn.MouseButton1Click:Connect(function() mainFrame.Visible = false end)
 
+-- Sidebar container and slight right offset (tabs won't touch left edge)
 local sidebar = new("Frame", {Parent = mainFrame, Size = UDim2.new(0,160,0,FRAME_H-40), Position = UDim2.new(0,0,0,40), BackgroundColor3 = theme.side})
 new("UICorner", {Parent = sidebar, CornerRadius = UDim.new(0,8)})
-local inner = new("Frame", {Parent = sidebar, Position = UDim2.new(0,8,0,8), Size = UDim2.new(1,-16,1,-16), BackgroundTransparency = 1})
+local inner = new("Frame", {Parent = sidebar, Position = UDim2.new(0,12,0,12), Size = UDim2.new(1,-24,1,-24), BackgroundTransparency = 1})
 local sidebarLayout = new("UIListLayout", {Parent = inner, Padding = UDim.new(0,8), FillDirection = Enum.FillDirection.Vertical, SortOrder = Enum.SortOrder.LayoutOrder})
 sidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 sidebarLayout.VerticalAlignment = Enum.VerticalAlignment.Top
@@ -147,9 +152,7 @@ local function makeSlider(parent, text, min, max, default, posY, callback)
 	bar.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
 	end)
-	UserInputService.InputEnded:Connect(function(input)
-		if dragging and input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
-	end)
+	UserInputService.InputEnded:Connect(function(input) if dragging and input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
 	UserInputService.InputChanged:Connect(function(input)
 		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
 			local mx = input.Position.X
@@ -165,7 +168,7 @@ local function makeSlider(parent, text, min, max, default, posY, callback)
 	return frame
 end
 
--- VISUAL tab
+-- VISUAL tab content
 do
 	local p = pages.Visual.frame
 	makeLabel(p, "Visual settings", 6)
@@ -204,9 +207,9 @@ do
 	makeLabel(p, "Player", 6)
 	local nameLabel = new("TextLabel", {Parent = p, Text = "Player: "..LocalPlayer.Name, Size = UDim2.new(1,-12,0,22), Position = UDim2.new(0,6,0,36), BackgroundTransparency = 1, TextColor3 = theme.text, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left})
 	local healthLabel = new("TextLabel", {Parent = p, Text = "Health: -", Size = UDim2.new(1,-12,0,22), Position = UDim2.new(0,6,0,64), BackgroundTransparency = 1, TextColor3 = theme.subtext, Font = Enum.Font.Gotham, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left})
-	makeSlider(p, "WalkSpeed (client)", 8, 100, 16, 96, function(v) screenGui:SetAttribute("WALKSPEED", v) end)
-	makeSlider(p, "JumpPower (client)", 20, 120, 50, 156, function(v) screenGui:SetAttribute("JUMPPOWER", v) end)
-	makeToggle(p, "Show Position (HUD)", false, 216, function(v) screenGui:SetAttribute("SHOW_POS", v) end)
+	makeSlider(p, "WalkSpeed", 8, 100, 16, 96, function(v) screenGui:SetAttribute("WALKSPEED", v) end)
+	makeSlider(p, "JumpPower", 20, 120, 50, 156, function(v) screenGui:SetAttribute("JUMPPOWER", v) end)
+	makeToggle(p, "Show Position", false, 216, function(v) screenGui:SetAttribute("SHOW_POS", v) end)
 	RunService.RenderStepped:Connect(function()
 		local char = LocalPlayer.Character
 		local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -219,7 +222,7 @@ do
 	local p = pages.World.frame
 	makeLabel(p, "World", 6)
 	makeSlider(p, "Menu Background Transparency", 0, 100, 0, 36, function(v) mainFrame.BackgroundTransparency = v/100 end)
-	makeSlider(p, "Accent Thickness", 1, 6, 2, 96, function(v) local s = mainFrame:FindFirstChildOfClass("UIStroke"); if s then s.Thickness = v end end)
+	makeSlider(p, "Accent Thickness (UIStroke)", 1, 6, 2, 96, function(v) local s = mainFrame:FindFirstChildOfClass("UIStroke"); if s then s.Thickness = v end end)
 	makeToggle(p, "Show Player Position on HUD", false, 156, function(v) screenGui:SetAttribute("SHOW_POS", v) end)
 end
 
@@ -228,6 +231,7 @@ do
 	local p = pages.Weapon.frame
 	makeLabel(p, "Weapon", 6)
 	local equippedLabel = new("TextLabel", {Parent = p, Text = "Equipped: None", Size = UDim2.new(1,-12,0,22), Position = UDim2.new(0,6,0,36), BackgroundTransparency = 1, TextColor3 = theme.text, Font = Enum.Font.Gotham, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left})
+	local infoLabel = new("TextLabel", {Parent = p, Text = "Weapon info is client-side only.", Size = UDim2.new(1,-12,0,40), Position = UDim2.new(0,6,0,64), BackgroundTransparency = 1, TextColor3 = theme.subtext, Font = Enum.Font.Gotham, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left})
 	RunService.RenderStepped:Connect(function()
 		local char = LocalPlayer.Character
 		local tool = char and char:FindFirstChildOfClass("Tool")
@@ -235,13 +239,13 @@ do
 	end)
 end
 
--- FOV circle (always allowed to show independent of menu)
+-- FOV visuals (circular, visible independent of menu)
 local fovContainer = new("Frame", {Parent = screenGui, AnchorPoint = Vector2.new(0.5,0.5), Position = UDim2.fromScale(0.5,0.5), Size = UDim2.fromOffset(300,300), BackgroundTransparency = 1, Visible = true})
 local fovCircle = new("Frame", {Parent = fovContainer, AnchorPoint = Vector2.new(0.5,0.5), Position = UDim2.fromScale(0.5,0.5), Size = UDim2.fromOffset(300,300), BackgroundTransparency = 1})
 new("UICorner", {Parent = fovCircle, CornerRadius = UDim.new(1,0)})
 local fovStroke = new("UIStroke", {Parent = fovCircle, Color = theme.accent, Thickness = 2})
 
--- ESP manager (players + tagged models)
+-- ESP manager (players + tagged workspace models)
 local espStore = {}
 local function getRoot(model)
 	if not model then return nil end
@@ -272,14 +276,14 @@ local function removeESP(model)
 end
 
 local function refreshESP()
-	-- ensure player characters
+	-- players
 	for _,pl in ipairs(Players:GetPlayers()) do
 		local char = pl.Character
 		if char and char.Parent and char ~= LocalPlayer.Character then
 			if not espStore[char] then createESP(char) end
 		end
 	end
-	-- ensure tagged workspace models
+	-- tagged workspace models
 	for _,m in ipairs(CollectionService:GetTagged("TestTarget")) do
 		if not espStore[m] then createESP(m) end
 	end
@@ -293,13 +297,9 @@ local function refreshESP()
 	end
 end
 
-Players.PlayerAdded:Connect(function(pl)
-	pl.CharacterAdded:Connect(function() task.wait(0.05); refreshESP() end)
-end)
+Players.PlayerAdded:Connect(function(pl) pl.CharacterAdded:Connect(function() task.wait(0.05); refreshESP() end) end)
 Players.PlayerRemoving:Connect(function(pl) if pl.Character then removeESP(pl.Character) end end)
-for _,pl in ipairs(Players:GetPlayers()) do
-	pl.CharacterAdded:Connect(function() task.wait(0.05); refreshESP() end)
-end
+for _,pl in ipairs(Players:GetPlayers()) do pl.CharacterAdded:Connect(function() task.wait(0.05); refreshESP() end) end
 CollectionService:GetInstanceAddedSignal("TestTarget"):Connect(function() task.wait(0.05); refreshESP() end)
 CollectionService:GetInstanceRemovedSignal("TestTarget"):Connect(refreshESP)
 refreshESP()
@@ -322,7 +322,7 @@ screenGui:SetAttribute("WALKSPEED", 16)
 screenGui:SetAttribute("JUMPPOWER", 50)
 screenGui:SetAttribute("SHOW_POS", false)
 
--- center & drag
+-- center/drag helpers
 local function centerWindow()
 	local vp = camera and camera.ViewportSize or Vector2.new(1280,720)
 	local x = math.floor((vp.X - FRAME_W) / 2)
@@ -360,12 +360,24 @@ end)
 
 local openBtn = new("TextButton", {Parent = screenGui, Text = "Abrir Menu", Size = UDim2.new(0,120,0,30), Position = UDim2.new(0,12,0,12), BackgroundColor3 = Color3.fromRGB(60,60,60), TextColor3 = theme.text})
 new("UICorner", {Parent = openBtn, CornerRadius = UDim.new(0,6)})
-openBtn.MouseButton1Click:Connect(function() mainFrame.Visible = not mainFrame.Visible if mainFrame.Visible then centerWindow() end end)
-UserInputService.InputBegan:Connect(function(input, processed) if processed then return end if input.UserInputType == Enum.UserInputType.Keyboard then if input.KeyCode == Enum.KeyCode.Insert or input.KeyCode == Enum.KeyCode.M then mainFrame.Visible = not mainFrame.Visible if mainFrame.Visible then centerWindow() end end end end)
+openBtn.MouseButton1Click:Connect(function()
+	if not mainFrame.Visible then centerWindow() end
+	mainFrame.Visible = not mainFrame.Visible
+end)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed then return end
+	if input.UserInputType == Enum.UserInputType.Keyboard then
+		if input.KeyCode == Enum.KeyCode.Insert or input.KeyCode == Enum.KeyCode.M then
+			if not mainFrame.Visible then centerWindow() end
+			mainFrame.Visible = not mainFrame.Visible
+		end
+	end
+end)
 
 -- apply settings & update visuals
 RunService.RenderStepped:Connect(function()
-	-- FOV visuals (circular)
+	-- FOV visuals (circular) visible regardless of menu
 	local fovSize = screenGui:GetAttribute("FOV_SIZE") or 150
 	local fr = screenGui:GetAttribute("FOV_COLOR_R") or theme.accent.R
 	local fg = screenGui:GetAttribute("FOV_COLOR_G") or theme.accent.G
@@ -374,9 +386,9 @@ RunService.RenderStepped:Connect(function()
 	fovContainer.Size = UDim2.fromOffset(fovSize*2, fovSize*2)
 	fovCircle.Size = UDim2.fromOffset(fovSize*2, fovSize*2)
 	fovStroke.Color = Color3.new(fr,fg,fb)
-	fovContainer.Visible = showfov -- visible even when menu closed
+	fovContainer.Visible = showfov
 
-	-- ensure ESP items exist for players & tags
+	-- ensure ESP items exist (players + tagged models)
 	refreshESP()
 
 	-- update ESP entries
@@ -387,7 +399,7 @@ RunService.RenderStepped:Connect(function()
 			data.hp.Visible = screenGui:GetAttribute("ESP_HEALTH")
 			data.dist.Visible = screenGui:GetAttribute("ESP_DISTANCE")
 			local color = Color3.new(screenGui:GetAttribute("ESP_COLOR_R") or 1, screenGui:GetAttribute("ESP_COLOR_G") or 1, screenGui:GetAttribute("ESP_COLOR_B") or 1)
-			-- highlight check
+
 			local highlight = screenGui:GetAttribute("ESP_HIGHLIGHT")
 			local hs = data.frame:FindFirstChild("HighlightStroke")
 			if highlight and data.gui.Adornee then
@@ -408,7 +420,7 @@ RunService.RenderStepped:Connect(function()
 			else
 				if hs then hs:Destroy() end
 			end
-			-- values
+
 			local hum = model:FindFirstChildOfClass("Humanoid")
 			if hum and hum.Health ~= nil then data.hp.Text = "HP: "..math.floor(hum.Health) else data.hp.Text = "" end
 			local root = getRoot(model)
@@ -418,6 +430,7 @@ RunService.RenderStepped:Connect(function()
 			else
 				data.dist.Text = ""
 			end
+
 			local stroke = data.frame:FindFirstChildOfClass("UIStroke")
 			if not stroke then new("UIStroke", {Parent = data.frame, Color = color, Thickness = 1}) else stroke.Color = color end
 		end
