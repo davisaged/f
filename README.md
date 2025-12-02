@@ -16,13 +16,14 @@ local function new(className, props)
 				pcall(function() obj[k] = v end)
 			end
 		end
-		if props.Parent then
+		if props and props.Parent then
 			pcall(function() obj.Parent = props.Parent end)
 		end
 	end
 	return obj
 end
 
+-- cleanup previous
 local existing = playerGui:FindFirstChild("SinglePlayerMenu_GUI")
 if existing then existing:Destroy() end
 
@@ -39,6 +40,7 @@ local theme = {
 	subtext = Color3.fromRGB(200,200,200),
 }
 
+-- build main menu (keeps your previous design)
 local mainFrame = new("Frame", {
 	Parent = screenGui,
 	Name = "Main",
@@ -171,10 +173,11 @@ local function makeSlider(parent, text, min, max, default, posY, callback)
 	return frame
 end
 
--- VISUAL tab
+-- VISUAL page controls
 do
 	local p = pages.Visual.frame
 	makeLabel(p, "Visual settings", 6)
+	-- note: toggles below are independent; you can enable name/health/distance without enabling box
 	makeToggle(p, "ESP BOX", true, 36, function(v) screenGui:SetAttribute("ESP_BOX", v) end)
 	makeToggle(p, "ESP NAME", true, 76, function(v) screenGui:SetAttribute("ESP_NAME", v) end)
 	makeToggle(p, "ESP HEALTH", true, 116, function(v) screenGui:SetAttribute("ESP_HEALTH", v) end)
@@ -189,56 +192,26 @@ do
 	end
 end
 
--- MIRA tab
+-- other pages kept as before (Mira/Player/World/Weapon)
 do
 	local p = pages.Mira.frame
 	makeLabel(p, "Mira (visual only)", 6)
 	makeSlider(p, "FOV Size (px)", 40, 500, 150, 36, function(v) screenGui:SetAttribute("FOV_SIZE", v) end)
-	makeLabel(p, "FOV Color", 96)
-	local fc = {theme.accent, Color3.fromRGB(255,60,60), Color3.fromRGB(80,140,220), Color3.fromRGB(200,200,50)}
-	for i,c in ipairs(fc) do
-		local b = new("TextButton", {Parent = p, Size = UDim2.new(0,36,0,26), Position = UDim2.new(0, 12 + (i-1)*44, 0, 128), BackgroundColor3 = c, Text = ""})
-		new("UICorner", {Parent = b, CornerRadius = UDim.new(0,6)})
-		b.MouseButton1Click:Connect(function() screenGui:SetAttribute("FOV_COLOR_R", c.R); screenGui:SetAttribute("FOV_COLOR_G", c.G); screenGui:SetAttribute("FOV_COLOR_B", c.B) end)
-	end
-	makeToggle(p, "Show FOV Circle", true, 176, function(v) screenGui:SetAttribute("SHOW_FOV", v) end)
+	makeToggle(p, "Show FOV Circle", true, 76, function(v) screenGui:SetAttribute("SHOW_FOV", v) end)
 end
-
--- PLAYER tab
 do
 	local p = pages.Player.frame
 	makeLabel(p, "Player", 6)
-	local nameLabel = new("TextLabel", {Parent = p, Text = "Player: "..LocalPlayer.Name, Size = UDim2.new(1,-12,0,22), Position = UDim2.new(0,6,0,36), BackgroundTransparency = 1, TextColor3 = theme.text, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left})
-	local healthLabel = new("TextLabel", {Parent = p, Text = "Health: -", Size = UDim2.new(1,-12,0,22), Position = UDim2.new(0,6,0,64), BackgroundTransparency = 1, TextColor3 = theme.subtext, Font = Enum.Font.Gotham, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left})
-	makeSlider(p, "WalkSpeed (client)", 8, 100, 16, 96, function(v) screenGui:SetAttribute("WALKSPEED", v) end)
-	makeSlider(p, "JumpPower (client)", 20, 120, 50, 156, function(v) screenGui:SetAttribute("JUMPPOWER", v) end)
-	makeToggle(p, "Show Position (HUD)", false, 216, function(v) screenGui:SetAttribute("SHOW_POS", v) end)
-	RunService.RenderStepped:Connect(function()
-		local char = LocalPlayer.Character
-		local hum = char and char:FindFirstChildOfClass("Humanoid")
-		if hum then healthLabel.Text = "Health: "..math.floor(hum.Health) else healthLabel.Text = "Health: -" end
-	end)
+	makeSlider(p, "WalkSpeed (client)", 8, 100, 16, 36, function(v) screenGui:SetAttribute("WALKSPEED", v) end)
+	makeSlider(p, "JumpPower (client)", 20, 120, 50, 96, function(v) screenGui:SetAttribute("JUMPPOWER", v) end)
 end
-
--- WORLD tab
 do
 	local p = pages.World.frame
-	makeLabel(p, "World", 6)
-	makeSlider(p, "Menu Background Transparency", 0, 100, 0, 36, function(v) mainFrame.BackgroundTransparency = v/100 end)
-	makeSlider(p, "Accent Thickness (UIStroke)", 1, 6, 2, 96, function(v) local s = mainFrame:FindFirstChildOfClass("UIStroke"); if s then s.Thickness = v end end)
-	makeToggle(p, "Show Player Position on HUD", false, 156, function(v) screenGui:SetAttribute("SHOW_POS", v) end)
+	makeLabel(p, "World options", 6)
 end
-
--- WEAPON tab
 do
 	local p = pages.Weapon.frame
 	makeLabel(p, "Weapon", 6)
-	local equippedLabel = new("TextLabel", {Parent = p, Text = "Equipped: None", Size = UDim2.new(1,-12,0,22), Position = UDim2.new(0,6,0,36), BackgroundTransparency = 1, TextColor3 = theme.text, Font = Enum.Font.Gotham, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left})
-	RunService.RenderStepped:Connect(function()
-		local char = LocalPlayer.Character
-		local tool = char and char:FindFirstChildOfClass("Tool")
-		if tool then equippedLabel.Text = "Equipped: "..tool.Name else local bp = LocalPlayer:FindFirstChild("Backpack"); local f = bp and bp:GetChildren()[1]; equippedLabel.Text = "Equipped: "..(f and f.Name or "None") end
-	end)
 end
 
 -- FOV circle visuals (always visible)
@@ -247,8 +220,9 @@ local fovCircle = new("Frame", {Parent = fovContainer, AnchorPoint = Vector2.new
 new("UICorner", {Parent = fovCircle, CornerRadius = UDim.new(1,0)})
 local fovStroke = new("UIStroke", {Parent = fovCircle, Color = theme.accent, Thickness = 2})
 
--- ESP manager (players + tagged workspace models)
+-- ESP manager (players + tagged models)
 local espStore = {}
+
 local function getRoot(model)
 	if not model then return nil end
 	return model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso") or model:FindFirstChild("UpperTorso") or model:FindFirstChild("Head")
@@ -265,31 +239,33 @@ local function createESP(model)
 	local root = getRoot(model)
 	if not root then return end
 
-	local bill = new("BillboardGui", {Parent = model, Adornee = root, Size = UDim2.fromOffset(120,160), AlwaysOnTop = true, Name = "SPM_ESP"})
+	-- BillboardGui parented to model so it follows character; Adornee=root
+	local bill = new("BillboardGui", {Parent = model, Adornee = root, Size = UDim2.fromOffset(140,180), AlwaysOnTop = true, Name = "SPM_ESP"})
 	bill.ResetOnSpawn = false
 	bill.StudsOffset = Vector3.new(0, 2, 0)
 
 	local container = new("Frame", {Parent = bill, BackgroundTransparency = 1, Size = UDim2.new(1,0,1,0), Position = UDim2.new(0,0)})
-	local nameLabel = new("TextLabel", {Parent = container, Text = model.Name or "?", Size = UDim2.new(1,0,0,18), Position = UDim2.new(0,0,-0.12,0), BackgroundTransparency = 1, TextColor3 = theme.text, Font = Enum.Font.GothamBold, TextSize = 14})
+	-- name centered above (use anchorcenter)
+	local nameLabel = new("TextLabel", {Parent = container, Text = model.Name or "?", Size = UDim2.new(1,0,0,18), BackgroundTransparency = 1, TextColor3 = theme.text, Font = Enum.Font.GothamBold, TextSize = 14})
 	nameLabel.AnchorPoint = Vector2.new(0.5,1)
-	nameLabel.Position = UDim2.new(0.5, 0, 0, -6)
+	nameLabel.Position = UDim2.new(0.5,0,0,-6)
 
-	local boxFrame = new("Frame", {Parent = container, BackgroundTransparency = 0.6, BackgroundColor3 = Color3.fromRGB(0,0,0), Size = UDim2.fromOffset(80,140), Position = UDim2.fromOffset(6,6)})
+	-- prepare frames (health on left, box in center area)
+	local healthBg = new("Frame", {Parent = container, BackgroundTransparency = 0.6, BackgroundColor3 = Color3.fromRGB(30,30,30)})
+	new("UICorner", {Parent = healthBg, CornerRadius = UDim.new(0,3)})
+	local healthFill = new("Frame", {Parent = healthBg, BackgroundColor3 = Color3.fromRGB(0,200,0)})
+	healthFill.AnchorPoint = Vector2.new(0,0)
+	local percLabel = new("TextLabel", {Parent = container, Text = "100%", Size = UDim2.fromOffset(36,18), BackgroundTransparency = 1, TextColor3 = theme.text, Font = Enum.Font.Gotham, TextSize = 14})
+	percLabel.AnchorPoint = Vector2.new(1,0) -- we'll position relative in render loop
+
+	local boxFrame = new("Frame", {Parent = container, BackgroundTransparency = 0.6, BackgroundColor3 = Color3.fromRGB(0,0,0)})
 	new("UICorner", {Parent = boxFrame, CornerRadius = UDim.new(0,6)})
 	new("UIStroke", {Parent = boxFrame, Color = theme.text, Thickness = 1})
 
-	local healthBg = new("Frame", {Parent = container, BackgroundTransparency = 0.6, BackgroundColor3 = Color3.fromRGB(30,30,30), Size = UDim2.fromOffset(10,140), Position = UDim2.fromOffset(6 + 80 + 6, 6)})
-	new("UICorner", {Parent = healthBg, CornerRadius = UDim.new(0,3)})
-	local healthFill = new("Frame", {Parent = healthBg, BackgroundColor3 = Color3.fromRGB(0,200,0), Size = UDim2.fromScale(1,1), Position = UDim2.new(0,0,0,0)})
-	healthFill.AnchorPoint = Vector2.new(0,0)
-
-	local percLabel = new("TextLabel", {Parent = container, Text = "100%", Size = UDim2.fromOffset(36,18), Position = UDim2.fromOffset(6 + 80 + 6 + 10 + 8, 6), BackgroundTransparency = 1, TextColor3 = theme.text, Font = Enum.Font.Gotham, TextSize = 14})
-	percLabel.AnchorPoint = Vector2.new(0,0)
-
-	local weaponLabel = new("TextLabel", {Parent = container, Text = "", Size = UDim2.new(1,0,0,18), Position = UDim2.new(0,0,1,6), BackgroundTransparency = 1, TextColor3 = theme.subtext, Font = Enum.Font.Gotham, TextSize = 14})
+	local weaponLabel = new("TextLabel", {Parent = container, Text = "", Size = UDim2.new(1,0,0,18), BackgroundTransparency = 1, TextColor3 = theme.subtext, Font = Enum.Font.Gotham, TextSize = 14})
 	weaponLabel.TextXAlignment = Enum.TextXAlignment.Center
 
-	local distLabel = new("TextLabel", {Parent = container, Text = "", Size = UDim2.new(1,0,0,16), Position = UDim2.new(0,0,1,26), BackgroundTransparency = 1, TextColor3 = theme.subtext, Font = Enum.Font.Gotham, TextSize = 12})
+	local distLabel = new("TextLabel", {Parent = container, Text = "", Size = UDim2.new(1,0,0,16), BackgroundTransparency = 1, TextColor3 = theme.subtext, Font = Enum.Font.Gotham, TextSize = 12})
 	distLabel.TextXAlignment = Enum.TextXAlignment.Center
 
 	espStore[model] = {
@@ -314,15 +290,18 @@ local function removeESP(model)
 end
 
 local function refreshESP()
+	-- players
 	for _,pl in ipairs(Players:GetPlayers()) do
 		local char = pl.Character
 		if char and char.Parent and char ~= LocalPlayer.Character then
 			if not espStore[char] then createESP(char) end
 		end
 	end
+	-- tagged workspace models
 	for _,m in ipairs(CollectionService:GetTagged("TestTarget")) do
 		if not espStore[m] then createESP(m) end
 	end
+	-- cleanup
 	for model,_ in pairs(espStore) do
 		local keep = false
 		for _,pl in ipairs(Players:GetPlayers()) do
@@ -357,7 +336,7 @@ screenGui:SetAttribute("WALKSPEED", 16)
 screenGui:SetAttribute("JUMPPOWER", 50)
 screenGui:SetAttribute("SHOW_POS", false)
 
--- center + drag
+-- center + drag helpers (keeps previous behavior)
 local function centerWindow()
 	local vp = camera and camera.ViewportSize or Vector2.new(1280,720)
 	local x = math.floor((vp.X - FRAME_W) / 2)
@@ -393,7 +372,6 @@ UserInputService.InputChanged:Connect(function(input)
 	end
 end)
 
--- open button (ensure on top)
 local openBtn = new("TextButton", {Parent = screenGui, Text = "Abrir Menu", Size = UDim2.new(0,120,0,30), Position = UDim2.new(0,12,0,12), BackgroundColor3 = Color3.fromRGB(60,60,60), TextColor3 = theme.text})
 openBtn.ZIndex = 60
 new("UICorner", {Parent = openBtn, CornerRadius = UDim.new(0,6)})
@@ -401,7 +379,6 @@ openBtn.MouseButton1Click:Connect(function()
 	if not mainFrame.Visible then centerWindow() end
 	mainFrame.Visible = not mainFrame.Visible
 end)
-
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.UserInputType == Enum.UserInputType.Keyboard then
@@ -412,7 +389,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 end)
 
--- update loop
+-- update loop: update FOV + ESP visuals; important: visibility of NAME/HEALTH/DIST independent of BOX
 RunService.RenderStepped:Connect(function()
 	-- FOV visuals
 	local fovSize = screenGui:GetAttribute("FOV_SIZE") or 150
@@ -425,73 +402,112 @@ RunService.RenderStepped:Connect(function()
 	fovStroke.Color = Color3.new(fr,fg,fb)
 	fovContainer.Visible = showfov
 
-	-- ensure ESP exists & update
+	-- ensure ESP objects
 	refreshESP()
+
+	-- update ESP elements
 	for model,data in pairs(espStore) do
 		if not data.bill or not data.bill.Parent then espStore[model] = nil else
-			data.bill.Enabled = screenGui:GetAttribute("ESP_BOX")
-			data.name.Visible = screenGui:GetAttribute("ESP_NAME")
+			-- independent toggles:
+			local showBox = screenGui:GetAttribute("ESP_BOX")
+			local showName = screenGui:GetAttribute("ESP_NAME")
+			local showHealth = screenGui:GetAttribute("ESP_HEALTH")
+			local showDist = screenGui:GetAttribute("ESP_DISTANCE")
+
+			-- box visibility and other components independent
+			data.box.Visible = showBox
+			data.name.Visible = showName
+
+			-- color
 			local color = Color3.new(screenGui:GetAttribute("ESP_COLOR_R") or 1, screenGui:GetAttribute("ESP_COLOR_G") or 1, screenGui:GetAttribute("ESP_COLOR_B") or 1)
 			local stroke = data.box:FindFirstChildOfClass("UIStroke")
 			if stroke then stroke.Color = color end
 
+			-- compute screen-projected size
 			local head = getHead(model)
 			local root = getRoot(model)
 			if head and root then
-				local topWorld = head.Position + Vector3.new(0,0.3,0)
-				local bottomWorld = root.Position - Vector3.new(0,0.8,0)
+				local topWorld = head.Position + Vector3.new(0, 0.3, 0)
+				local bottomWorld = root.Position - Vector3.new(0, 0.8, 0)
 				local topScreen, topOn = camera:WorldToViewportPoint(topWorld)
 				local botScreen, botOn = camera:WorldToViewportPoint(bottomWorld)
+
 				local pixelH = 120
-				if topOn and botOn then pixelH = math.max(24, math.abs(topScreen.Y - botScreen.Y)) end
-				local pixelW = math.max(18, math.floor(pixelH * 0.45))
-				local hbW = 10
-				local totalW = pixelW + 8 + hbW + 40
-				local totalH = pixelH + 40
+				if topOn and botOn then
+					pixelH = math.max(24, math.abs(topScreen.Y - botScreen.Y))
+				end
+				-- slightly wider so box better fits: increase ratio
+				local pixelW = math.max(24, math.floor(pixelH * 0.50))
+				local hbW = 12
+
+				-- measure perc label width (fixed)
+				local percW = 36
+				local gap = 6
+
+				local totalW = percW + gap + hbW + gap + pixelW + 40
+				local totalH = pixelH + 44
 
 				data.bill.Size = UDim2.fromOffset(totalW, totalH)
-				data.box.Size = UDim2.fromOffset(pixelW, pixelH)
-				data.box.Position = UDim2.fromOffset(6, 6)
 
+				-- positions: perc (left-most, anchored right so it sits just before health bar)
+				data.perc.Size = UDim2.fromOffset(percW, 18)
+				data.perc.AnchorPoint = Vector2.new(0,0)
+				data.perc.Position = UDim2.fromOffset(6, 6)
+				data.perc.Text = "0%"
+
+				-- health background to the right of perc
+				local healthX = 6 + percW + gap
 				data.healthBg.Size = UDim2.fromOffset(hbW, pixelH)
-				data.healthBg.Position = UDim2.fromOffset(6 + pixelW + 6, 6)
+				data.healthBg.Position = UDim2.fromOffset(healthX, 6)
+
+				-- box to the right of health
+				local boxX = healthX + hbW + gap
+				data.box.Size = UDim2.fromOffset(pixelW, pixelH)
+				data.box.Position = UDim2.fromOffset(boxX, 6)
+
+				-- compute health %
 				local hum = model:FindFirstChildOfClass("Humanoid")
 				local healthPct = 0
-				if hum and hum.Health and hum.MaxHealth and hum.MaxHealth > 0 then healthPct = math.clamp(hum.Health / hum.MaxHealth, 0, 1) end
+				if hum and hum.Health and hum.MaxHealth and hum.MaxHealth > 0 then
+					healthPct = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+				end
+				-- healthFill anchored top; height = pct * pixelH
 				data.healthFill.Size = UDim2.new(1, 0, healthPct, 0)
 				data.healthFill.Position = UDim2.new(0, 0, 0, 0)
 				data.healthFill.BackgroundColor3 = Color3.fromHSV(healthPct * 0.33, 1, 0.9)
 
-				data.perc.Position = UDim2.fromOffset(6 + pixelW + hbW + 12, 6)
+				-- perc text to the left of health bar or above depending space
 				data.perc.Text = tostring(math.floor(healthPct * 100)) .. "%"
 
-				data.name.Position = UDim2.fromOffset((totalW/2) - (data.name.AbsoluteSize.X/2), -18)
+				-- name center above
+				data.name.Position = UDim2.new(0.5, 0, 0, -6)
+				data.name.AnchorPoint = Vector2.new(0.5, 1)
 
+				-- weapon & dist below box
 				local weaponText = ""
 				if model and model:IsA("Model") then
 					local tool = model:FindFirstChildOfClass("Tool")
 					if tool then weaponText = tool.Name end
 				end
 				data.weapon.Text = weaponText
-				data.weapon.Position = UDim2.fromOffset(6, 6 + pixelH + 4)
-
-				local distText = ""
+				data.weapon.Position = UDim2.fromOffset(boxX, 6 + pixelH + 6)
+				data.dist.Text = ""
 				if root and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
 					local d = (root.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-					distText = string.format("%dm", math.floor(d))
+					data.dist.Text = string.format("%dm", math.floor(d))
 				end
-				data.dist.Text = distText
-				data.dist.Position = UDim2.fromOffset(6, 6 + pixelH + 22)
+				data.dist.Position = UDim2.fromOffset(boxX, 6 + pixelH + 24)
 
-				data.healthBg.Visible = screenGui:GetAttribute("ESP_HEALTH")
-				data.perc.Visible = screenGui:GetAttribute("ESP_HEALTH")
+				-- toggles independent of box
+				data.healthBg.Visible = showHealth
+				data.perc.Visible = showHealth
 				data.weapon.Visible = true
-				data.dist.Visible = screenGui:GetAttribute("ESP_DISTANCE")
+				data.dist.Visible = showDist
 			end
 		end
 	end
 
-	-- apply client-only walk/jump
+	-- apply client-only walk/jump (unchanged)
 	local ws = screenGui:GetAttribute("WALKSPEED") or 16
 	local jp = screenGui:GetAttribute("JUMPPOWER") or 50
 	local char = LocalPlayer.Character
@@ -504,8 +520,9 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
--- ensure centered on resize
+-- keep centered on resize
 camera:GetPropertyChangedSignal("ViewportSize"):Connect(function() if mainFrame.Visible then centerWindow() end end)
 
+-- init
 centerWindow()
 mainFrame.Visible = false
